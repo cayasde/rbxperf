@@ -34,8 +34,26 @@ const function run(opts: RunnerOptions): boolean
 	local completed = 0
 	const total_files = #files
 
+	const hourly_pauses = math.floor((total_files - 1) / ocale.REQUESTS_PER_HOUR)
+	const minute_pauses = math.floor((total_files - 1) / ocale.REQUESTS_PER_MINUTE) - hourly_pauses
+	const estimated_minutes = (hourly_pauses * 60) + minute_pauses
+
+	if estimated_minutes > 0 then
+		logger.warn(`ETA: Execution will take ~{estimated_minutes} minutes due to Open Cloud quotas.`)
+	end
+
 	for i, file_path in files do
-		if i > 1 and (i - 1) % ocale.REQUESTS_PER_MINUTE == 0 then
+		const is_hourly_pause = i > 1 and (i - 1) % ocale.REQUESTS_PER_HOUR == 0
+		const is_minute_pause = i > 1 and (i - 1) % ocale.REQUESTS_PER_MINUTE == 0 and not is_hourly_pause
+
+		if is_hourly_pause then
+			logger.warn(
+				`Hourly quota reached ({ocale.REQUESTS_PER_HOUR} RPH). Sleeping for 1 hour to prevent API lockout...`
+			)
+			task.wait(3600)
+		end
+
+		if is_minute_pause then
 			logger.warn(`Rate limit reached ({ocale.REQUESTS_PER_MINUTE} RPM). Sleeping for 60 seconds...`)
 			task.wait(60)
 		end

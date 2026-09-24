@@ -4,6 +4,7 @@ const task = require '@std/task'
 
 const MAX_CONCURRENT_TASKS = 10
 const REQUESTS_PER_MINUTE = 5
+const REQUESTS_PER_HOUR = 30
 const MAX_EXECUTION_TIME_SECONDS = 300
 
 export type OcaleConfig = {
@@ -72,6 +73,7 @@ end
 return table.freeze {
 	MAX_CONCURRENT_TASKS = MAX_CONCURRENT_TASKS,
 	REQUESTS_PER_MINUTE = REQUESTS_PER_MINUTE,
+	REQUESTS_PER_HOUR = REQUESTS_PER_HOUR,
 	MAX_EXECUTION_TIME_SECONDS = MAX_EXECUTION_TIME_SECONDS,
 
 	execute_code = execute_code,
