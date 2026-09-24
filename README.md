@@ -2,6 +2,9 @@
 
 **A Surgical Performance Regression CLI for Roblox Engine.**
 
+> [!WARNING]
+> **Work In Progress:** This project is nowhere near where I want it to be yet, and will go through some heavy and cool evolutions. Currently, I am busy developing games, so I haven't had the time to finish the standalone CLI or polish the codebase. I strongly do not recommend using this in production, as it doesn't currently do enough useful things for you to even consider relying on it. Breaking changes are expected and acceptable in this phase.
+
 `rbxperf` is a specialized, zero-overhead benchmarking tool that runs your code exactly where it matters: inside live Roblox servers via Open Cloud. It detects latency spikes, calculates statistical percentiles (P50, P95, P99), and strictly protects your architecture from performance regressions in CI/CD environments.
 
 ## Architecture & Philosophy
@@ -21,7 +24,7 @@ This is a mathematical constraint imposed by the engine, not an opinionated guid
 
 ### The Execution Algorithm
 
-We explicitly **do not batch** multiple benchmark files into a single network request. *(Wait, I really want to batch my benchmarks! Fine, see [Manual Batching (At Your Own Risk)](#manual-batching-at-your-own-risk)).*
+We explicitly **do not batch** multiple benchmark files into a single network request. _(Wait, I really want to batch my benchmarks! Fine, see [Manual Batching (At Your Own Risk)](#manual-batching-at-your-own-risk))._
 Doing so would result in severe Memory Pollution (Garbage Collection from Benchmark A artificially increasing the latency of Benchmark B).
 
 Our algorithm guarantees **Sterile Isolation**:
@@ -48,7 +51,7 @@ end
 
 ## Manual Batching (At Your Own Risk)
 
-Because of our Sterile Isolation philosophy, `rbxperf` will **never** natively support batching multiple `.bench.luau` files together to bypass the Open Cloud rate limits. 
+Because of our Sterile Isolation philosophy, `rbxperf` will **never** natively support batching multiple `.bench.luau` files together to bypass the Open Cloud rate limits.
 
 However, if you absolutely must bypass the quotas and are willing to accept the severe memory pollution risks, you can manually compose your benchmarks. Nobody will stop you from creating a single `runner.bench.luau` that requires your internal modules and calls them sequentially:
 
@@ -63,4 +66,33 @@ return function()
 end
 ```
 
-By doing this, you consolidate your entire suite into a single network request. Just be aware that any latency spikes reported for `bench_math` might actually be the Engine's Garbage Collector cleaning up the mess left behind by `bench_physics`. You have been warned!
+By doing this, you consolidate your entire suite into a single network request. Just be aware that any latency spikes reported for `bench_math` might actually be the Engine Garbage Collector cleaning up the mess left behind by `bench_physics`. You have been warned!
+
+## Roadmap
+
+### MicroProfiler & Memory Analysis
+
+Because `rbxperf` injects payloads directly into the live Roblox VM (rather than simulating them externally), we have native access to deep engine metrics.
+
+Future versions of this tool will integrate the [`rbxmp` / `libmp`](https://github.com/Roblox/libmp) module (MicroProfiler) and garbage collection hooks to provide:
+
+1. **Memory Tracking:** Exact byte allocations isolated by thread, captured directly via `CounterIterator` and `CounterDesc` objects, completely bypassing the unpredictable heuristics of Lua `gcinfo()`.
+2. **CPU/GPU Profiling:** Real engine frame-times extracted via `Session:GetFrameDesc()` instead of just `os.clock()` wall-time.
+3. **Bottleneck Identification:** Flagging whether a P99 latency spike was caused by pure algorithmic complexity or a sudden Garbage Collection stall, verified by traversing the engine stack via `LogIterator`.
+4. **Native Batching (Hypothesis):** With the deep thread-level isolation provided by `rbxmp`, it may become theoretically possible to mathematically isolate memory pollution and GC stalls between consecutive benchmarks. If this hypothesis is validated, future versions could support native batching, bypassing the Open Cloud quotas without violating our Sterile Isolation philosophy.
+
+### Lute Runtime Support
+
+While `rbxperf` is fundamentally designed to protect live Roblox experiences, future versions will introduce native support for the **Lute runtime**.
+
+This caters to developers building infrastructure, CLI tooling, or headless libraries that don't require the Roblox engine overhead but still demand rigorous regression testing.
+
+**We will strictly NOT support community runtimes (Lune, Zune, etc).**
+The rationale is twofold:
+
+1. **Official Authority:** Lute is the official standalone runtime maintained by the Luau language team.
+2. **Scope Discipline:** Attempting to maintain wrappers, APIs, and quirks for every community-forked runtime introduces unnecessary maintenance overhead and scope creep. We will restrict our support surface strictly to the official engines: Roblox Open Cloud and Lute.
+
+### CLI Distribution
+
+In the future, the `rbxperf` CLI will be compiled and distributed via GitHub Releases for **Windows, macOS, and Linux**. It will be fully installable and manageable through standard development toolchains like `rokit` and `mise`, allowing seamless integration into any CI/CD environment without manual scripting.
