@@ -79,7 +79,7 @@ Future versions of this tool will integrate the [`rbxmp` / `libmp`](https://gith
 1. **Memory Tracking:** Exact byte allocations isolated by thread, captured directly via `CounterIterator` and `CounterDesc` objects, completely bypassing the unpredictable heuristics of Lua `gcinfo()`.
 2. **CPU/GPU Profiling:** Real engine frame-times extracted via `Session:GetFrameDesc()` instead of just `os.clock()` wall-time.
 3. **Bottleneck Identification:** Flagging whether a P99 latency spike was caused by pure algorithmic complexity or a sudden Garbage Collection stall, verified by traversing the engine stack via `LogIterator`.
-4. **Native Batching (Hypothesis):** With the deep thread-level isolation provided by `rbxmp`, it may become theoretically possible to mathematically isolate memory pollution and GC stalls between consecutive benchmarks. If this hypothesis is validated, future versions could support native batching, bypassing the Open Cloud quotas without violating our Sterile Isolation philosophy.
+4. **Reliable Native Batching (Blocked):** Native batching requires the Roblox runtime to expose a documented, CI-compatible isolation boundary, ideally a fresh Luau VM or process per benchmark, with independent memory and GC accounting, plus a way to verify that boundary. Until those engine guarantees exist, benchmarks must remain in separate Open Cloud executions to preserve the Sterile Isolation philosophy.
 
 ### Lute Runtime Support
 
