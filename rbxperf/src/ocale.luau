@@ -2,6 +2,10 @@ const net = require '@std/net'
 const json = require '@std/json'
 const task = require '@std/task'
 
+const MAX_CONCURRENT_TASKS = 10
+const REQUESTS_PER_MINUTE = 5
+const MAX_EXECUTION_TIME_SECONDS = 300
+
 export type OcaleConfig = {
 	api_key: string,
 	universe_id: string,
@@ -65,4 +69,10 @@ const function execute_code(config: OcaleConfig, req: ExecuteLuauRequest): Execu
 	error 'OCALE task timed out after 60 seconds.'
 end
 
-return { execute_code = execute_code }
+return table.freeze {
+	MAX_CONCURRENT_TASKS = MAX_CONCURRENT_TASKS,
+	REQUESTS_PER_MINUTE = REQUESTS_PER_MINUTE,
+	MAX_EXECUTION_TIME_SECONDS = MAX_EXECUTION_TIME_SECONDS,
+
+	execute_code = execute_code,
+}
