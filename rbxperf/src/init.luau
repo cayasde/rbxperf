@@ -6,23 +6,49 @@ const ocale = require '@rbxperf/ocale'
 const logger = require '@rbxperf/logger'
 const task = require '@std/task'
 
+export type BenchmarkResult = {
+	path: string,
+	mean: number,
+	p0: number,
+	p50: number,
+	p90: number,
+	p95: number,
+	p100: number,
+	samples_count: number,
+	warmup_count: number,
+}
+
+export type RunResult = {
+	success: boolean,
+	duration_seconds: number,
+	results: { BenchmarkResult },
+}
+
 export type RunnerOptions = {
-	dir: string,
+	paths: { string },
 	api_key: string,
 	universe_id: string,
 	place_id: string,
+	samples: number?,
+	warmup: number?,
 }
 
-const function format_ms(val: number): string
-	return string.format('%.3fms', val)
-end
+const function run(opts: RunnerOptions): RunResult
+	const started_at = os.clock()
+	const files: { string } = {}
+	const seen_files: { [string]: boolean } = {}
 
-const function run(opts: RunnerOptions): boolean
-	const files = scanner.find_benchmarks(opts.dir)
+	for _, path in opts.paths do
+		for _, file_path in scanner.find_benchmarks(path) do
+			if seen_files[file_path] then continue end
+			seen_files[file_path] = true
+			table.insert(files, file_path)
+		end
+	end
 
 	if #files == 0 then
-		logger.warn(`No .bench.luau files found in '{opts.dir}'`)
-		return true
+		logger.warn(`No .bench.luau files found in '{table.concat(opts.paths, ', ')}'`)
+		return { success = true, duration_seconds = os.clock() - started_at, results = {} }
 	end
 
 	logger.info(`Found {#files} benchmark files. Dispatching concurrently to Roblox Cloud...`)
@@ -33,6 +59,7 @@ const function run(opts: RunnerOptions): boolean
 	local success = true
 	local completed = 0
 	const total_files = #files
+	const results_by_path: { [string]: BenchmarkResult } = {}
 
 	const hourly_pauses = math.floor((total_files - 1) / ocale.REQUESTS_PER_HOUR)
 	const minute_pauses = math.floor((total_files - 1) / ocale.REQUESTS_PER_MINUTE) - hourly_pauses
@@ -40,6 +67,70 @@ const function run(opts: RunnerOptions): boolean
 
 	if estimated_minutes > 0 then
 		logger.warn(`ETA: Execution will take ~{estimated_minutes} minutes due to Open Cloud quotas.`)
+	end
+
+	const function dispatch(file_path: string)
+		logger.info(`Dispatching {file_path}...`)
+
+		local read_ok, code = pcall(function()
+			return fs.readFileToString(file_path)
+		end)
+
+		if not read_ok then
+			logger.err(`Failed to read file {file_path}: {code}`)
+			success = false
+			return
+		end
+
+		const script = payload.build(code :: string, { samples = opts.samples, warmup = opts.warmup })
+
+		local exec_ok, response = pcall(function()
+			return ocale.execute_code(config, { script = script })
+		end)
+
+		if not exec_ok then
+			logger.err(`Network/Execution failed for {file_path}: {response}`)
+			success = false
+			return
+		end
+
+		const res = response :: ocale.ExecuteLuauResponse
+
+		if res.state ~= 'COMPLETE' then
+			logger.err(
+				`Engine state for {file_path} was {res.state}. Check your benchmark code for Yielding or Errors.`
+			)
+			success = false
+			return
+		end
+
+		if #res.results == 0 then
+			logger.err(`{file_path} returned no output. Did the script crash inside the engine?`)
+			success = false
+			return
+		end
+
+		local parse_ok, stats = pcall(function()
+			return json.deserialize(res.results[1]) :: any
+		end)
+
+		if not parse_ok then
+			logger.err(`Failed to parse JSON response from {file_path}: {stats}`)
+			success = false
+			return
+		end
+
+		results_by_path[file_path] = {
+			path = file_path,
+			mean = stats.mean,
+			p0 = stats.p0,
+			p50 = stats.p50,
+			p90 = stats.p90,
+			p95 = stats.p95,
+			p100 = stats.p100,
+			samples_count = stats.samples_count,
+			warmup_count = stats.warmup_count,
+		}
 	end
 
 	for i, file_path in files do
@@ -59,67 +150,13 @@ const function run(opts: RunnerOptions): boolean
 		end
 
 		task.spawn(function()
-			logger.info(`Dispatching {file_path}...`)
-
-			local read_ok, code = pcall(function()
-				return fs.readFileToString(file_path)
+			const ok, error_message = pcall(function()
+				dispatch(file_path)
 			end)
-
-			if not read_ok then
-				logger.err(`Failed to read file {file_path}: {code}`)
+			if not ok then
+				logger.err(`Unexpected failure while processing {file_path}: {error_message}`)
 				success = false
-				completed += 1
-				return
 			end
-
-			const script = payload.build(code :: string)
-
-			local exec_ok, response = pcall(function()
-				return ocale.execute_code(config, { script = script })
-			end)
-
-			if not exec_ok then
-				logger.err(`Network/Execution failed for {file_path}: {response}`)
-				success = false
-				completed += 1
-				return
-			end
-
-			const res = response :: ocale.ExecuteLuauResponse
-
-			if res.state ~= 'COMPLETE' then
-				logger.err(
-					`Engine state for {file_path} was {res.state}. Check your benchmark code for Yielding or Errors.`
-				)
-				success = false
-				completed += 1
-				return
-			end
-
-			if #res.results == 0 then
-				logger.err(`{file_path} returned no output. Did the script crash inside the engine?`)
-				success = false
-				completed += 1
-				return
-			end
-
-			local parse_ok, stats = pcall(function()
-				return json.deserialize(res.results[1]) :: any
-			end)
-
-			if not parse_ok then
-				logger.err(`Failed to parse JSON response from {file_path}: {stats}`)
-				success = false
-				completed += 1
-				return
-			end
-
-			logger.success(
-				`[{file_path}] p50: {format_ms(stats.p50)} | p95: {format_ms(stats.p95)} | p99: {format_ms(
-					stats.p99
-				)} | mean: {format_ms(stats.mean)}`
-			)
-
 			completed += 1
 		end)
 	end
@@ -128,7 +165,14 @@ const function run(opts: RunnerOptions): boolean
 		task.wait(0.1)
 	end
 
-	return success
+	if not success then return { success = false, duration_seconds = os.clock() - started_at, results = {} } end
+
+	const results: { BenchmarkResult } = {}
+	for _, file_path in files do
+		table.insert(results, results_by_path[file_path])
+	end
+
+	return { success = true, duration_seconds = os.clock() - started_at, results = results }
 end
 
 return table.freeze { run = run }

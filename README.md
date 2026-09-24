@@ -3,9 +3,9 @@
 **A Surgical Performance Regression CLI for Roblox Engine.**
 
 > [!WARNING]
-> **Work In Progress:** This project is nowhere near where I want it to be yet, and will go through some heavy and cool evolutions. Currently, I am busy developing games, so I haven't had the time to finish the standalone CLI or polish the codebase. I strongly do not recommend using this in production, as it doesn't currently do enough useful things for you to even consider relying on it. Breaking changes are expected and acceptable in this phase.
+> **Work In Progress:** This project is still evolving and will go through some heavy and cool evolutions. The codebase is still being polished, and breaking changes are expected and acceptable in this phase.
 
-`rbxperf` is a specialized, zero-overhead benchmarking tool that runs your code exactly where it matters: inside live Roblox servers via Open Cloud. It detects latency spikes, calculates statistical percentiles (P50, P95, P99), and strictly protects your architecture from performance regressions in CI/CD environments.
+`rbxperf` is a specialized, zero-overhead benchmarking tool that runs your code exactly where it matters: inside live Roblox servers via Open Cloud. It detects latency spikes, calculates statistical percentiles (Min, P50, P90, P95, Max), and strictly protects your architecture from performance regressions in CI/CD environments.
 
 ## Architecture & Philosophy
 
@@ -49,6 +49,37 @@ return function()
 end
 ```
 
+## CLI
+
+Run `rbxperf` with one or more benchmark files or directories:
+
+```text
+rbxperf ./benchmarks
+rbxperf ./physics.bench.luau ./math.bench.luau
+```
+
+Directories are scanned recursively. Files are accepted when they use the `.bench.luau` suffix.
+
+Credentials can be provided through OS environment variables or a `.env` file in the current directory. `.env` values take precedence over OS environment variables:
+
+```dotenv
+ROBLOX_OPEN_CLOUD_API_KEY=your-api-key
+ROBLOX_UNIVERSE_ID=123456
+ROBLOX_PLACE_ID=123456
+```
+
+Sampling can be configured per invocation:
+
+```text
+rbxperf ./benchmarks --samples 10000 --warmup 100
+```
+
+To see all available arguments and options:
+
+```text
+rbxperf --help
+```
+
 ## Manual Batching (At Your Own Risk)
 
 Because of our Sterile Isolation philosophy, `rbxperf` will **never** natively support batching multiple `.bench.luau` files together to bypass the Open Cloud rate limits.
@@ -78,7 +109,7 @@ Future versions of this tool will integrate the [`rbxmp` / `libmp`](https://gith
 
 1. **Memory Tracking:** Exact byte allocations isolated by thread, captured directly via `CounterIterator` and `CounterDesc` objects, completely bypassing the unpredictable heuristics of Lua `gcinfo()`.
 2. **CPU/GPU Profiling:** Real engine frame-times extracted via `Session:GetFrameDesc()` instead of just `os.clock()` wall-time.
-3. **Bottleneck Identification:** Flagging whether a P99 latency spike was caused by pure algorithmic complexity or a sudden Garbage Collection stall, verified by traversing the engine stack via `LogIterator`.
+3. **Bottleneck Identification:** Flagging whether a high-percentile latency spike was caused by pure algorithmic complexity or a sudden Garbage Collection stall, verified by traversing the engine stack via `LogIterator`.
 4. **Reliable Native Batching (Blocked):** Native batching requires the Roblox runtime to expose a documented, CI-compatible isolation boundary, ideally a fresh Luau VM or process per benchmark, with independent memory and GC accounting, plus a way to verify that boundary. Until those engine guarantees exist, benchmarks must remain in separate Open Cloud executions to preserve the Sterile Isolation philosophy.
 
 ### Lute Runtime Support

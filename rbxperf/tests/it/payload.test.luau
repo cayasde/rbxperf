@@ -20,12 +20,15 @@ test.suite('PayloadIntegrationSuite', function(suite)
 
 		const stats = json.deserialize(response.results[1]) :: any
 
+		assert.eq('number', type(stats.p0), 'p0 is missing or invalid')
 		assert.eq('number', type(stats.p50), 'p50 is missing or invalid')
+		assert.eq('number', type(stats.p90), 'p90 is missing or invalid')
 		assert.eq('number', type(stats.p95), 'p95 is missing or invalid')
-		assert.eq('number', type(stats.p99), 'p99 is missing or invalid')
+		assert.eq('number', type(stats.p100), 'p100 is missing or invalid')
 		assert.eq('number', type(stats.mean), 'mean is missing or invalid')
 		assert.eq(50, stats.samples_count, 'Sample count mismatch')
+		assert.eq(10, stats.warmup_count, 'Warmup count mismatch')
 
-		assert.that(stats.p50 > 0, 'Timing failure, p50 was 0')
+		assert.that(stats.p0 > 0, 'Timing failure, p0 was 0')
 	end)
 end)

@@ -2,6 +2,7 @@
   "languageMode": "strict",
   "aliases": {
     "rbxperf": "./src",
+    "cli": "./cli",
     "tests": "./tests",
     "std": "~/.lute/typedefs/1.0.0/std",
     "lint": "~/.lute/typedefs/1.0.0/lint",

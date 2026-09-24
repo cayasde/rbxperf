@@ -38,16 +38,21 @@ for _, t in samples do
 end
 
 const mean = total / samples_count
+const p0 = samples[1]
 const p50 = samples[math.max(1, math.floor(samples_count * 0.50))]
+const p90 = samples[math.max(1, math.floor(samples_count * 0.90))]
 const p95 = samples[math.max(1, math.floor(samples_count * 0.95))]
-const p99 = samples[math.max(1, math.floor(samples_count * 0.99))]
+const p100 = samples[samples_count]
 
 const result = {
 	mean = mean,
+	p0 = p0,
 	p50 = p50,
+	p90 = p90,
 	p95 = p95,
-	p99 = p99,
-	samples_count = samples_count
+	p100 = p100,
+	samples_count = samples_count,
+	warmup_count = warmup_count,
 }
 
 return HttpService:JSONEncode(result)

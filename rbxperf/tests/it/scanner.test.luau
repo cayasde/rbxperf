@@ -6,7 +6,7 @@ const logger = require '@rbxperf/logger'
 test.suite('ScannerIntegrationSuite', function(suite)
 	suite:case('should return empty table for invalid directory', function(assert)
 		logger.set_writer(function() end)
-		const results = scanner.find_benchmarks('this_directory_does_not_exist_at_all_123')
+		const results = scanner.find_benchmarks 'this_directory_does_not_exist_at_all_123'
 		logger.set_writer(print)
 
 		assert.eq(0, #results)
@@ -25,9 +25,12 @@ test.suite('ScannerIntegrationSuite', function(suite)
 		fs.writeStringToFile(`{scratch_dir}/nested/ignored2.luau`, 'mock')
 
 		const results = scanner.find_benchmarks(scratch_dir)
+		const direct_file_results = scanner.find_benchmarks(`{scratch_dir}/a.bench.luau`)
 		fs.removeDirectory(scratch_dir, { recursive = true })
 
 		assert.eq(2, #results, 'Did not find exactly 2 benchmark files')
+		assert.eq(1, #direct_file_results, 'Did not accept a direct benchmark file path')
+		assert.eq(`{scratch_dir}/a.bench.luau`, direct_file_results[1])
 
 		local found_a = false
 		local found_b = false
