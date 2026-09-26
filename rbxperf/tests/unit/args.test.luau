@@ -13,7 +13,7 @@ test.suite('ArgsUnitSuite', function(suite)
 	suite:case('should parse paths and options', function(assert)
 		const result = args.parse(
 			{
-				'cli/init.luau',
+				'src/init.luau',
 				'./benchmarks',
 				'./other.bench.luau',
 				'--api-key',
@@ -49,7 +49,7 @@ test.suite('ArgsUnitSuite', function(suite)
 
 	suite:case('should treat values after -- as paths', function(assert)
 		const result = args.parse({
-			'cli/init.luau',
+			'src/init.luau',
 			'--api-key',
 			'key',
 			'--universe-id',
@@ -70,23 +70,23 @@ test.suite('ArgsUnitSuite', function(suite)
 	end)
 
 	suite:case('should return help before validating required options', function(assert)
-		const result = args.parse({ 'cli/init.luau', '--help' }, environment {})
+		const result = args.parse({ 'src/init.luau', '--help' }, environment {})
 		assert.eq('help', result.kind)
 	end)
 
 	suite:case('should reject invalid options and counts', function(assert)
-		const unknown = args.parse({ 'cli/init.luau', 'path', '--unknown' }, environment {})
+		const unknown = args.parse({ 'src/init.luau', 'path', '--unknown' }, environment {})
 		assert.eq('error', unknown.kind)
 		if unknown.kind == 'error' then assert.that(unknown.message:match 'Unknown option') end
 
-		const invalid_count = args.parse({ 'cli/init.luau', 'path', '--samples', '0' }, environment {})
+		const invalid_count = args.parse({ 'src/init.luau', 'path', '--samples', '0' }, environment {})
 		assert.eq('error', invalid_count.kind)
 		if invalid_count.kind == 'error' then assert.that(invalid_count.message:match 'expects an integer') end
 	end)
 
 	suite:case('should apply environment values and defaults', function(assert)
 		const result = args.parse(
-			{ 'cli/init.luau', 'path' },
+			{ 'src/init.luau', 'path' },
 			environment {
 				['ROBLOX_OPEN_CLOUD_API_KEY'] = 'environment-key',
 				['ROBLOX_UNIVERSE_ID'] = 'environment-universe',

@@ -1,4 +1,4 @@
-const runner = require '@rbxperf'
+const runner = require '@rbxperf/runner'
 
 type BenchmarkResult = runner.BenchmarkResult
 
