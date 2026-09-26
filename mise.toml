@@ -1,0 +1,16 @@
+[tools]
+luau = "0.736"
+"github:luau-lang/lute" = "1.0.0"
+python = "3.14.7"
+"github:JohnnyMorganz/luau-lsp" = "1.69.0"
+"github:JohnnyMorganz/stylua" = "2.5.2"
+
+[tasks."analyze"]
+description = "Analyze Luau sources with Luau LSP"
+depends = ["ensure-roblox-defs"]
+dir = "rbxperf"
+run = 'luau-lsp analyze --platform=roblox --defs=@roblox=../.codex/roblox.d.luau --ignore=**/roblox_packages/** --ignore=**/roblox_server_packages/** --ignore=src/rbxmp/CLICK_ME_AND_SUMMON_150K_LINES_OF_LAG.luau --ignore=**/.lute/typedefs/**/std/fs.luau --flag=LuauSolverV2=true src tests'
+
+[tasks."ensure-roblox-defs"]
+description = "Install Roblox Luau definitions when missing"
+run = "python .codex/scripts/ensure-roblox-defs.py"

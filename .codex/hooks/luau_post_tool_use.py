@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import TypeGuard
 
 PATCH_PATH_PATTERN = re.compile(
-	r"^\*\*\* (?:Add File|Update File|Move to):\s*(.*?)\s*$"
+	r"^\*\*\* (?:Add File|Update File|Move to|Delete File):\s*(.*?)\s*$"
 )
 
 
@@ -91,11 +91,10 @@ def main() -> int:
 
 	format_paths: list[str] = []
 	seen_paths: set[str] = set()
+	should_analyze = False
 
 	for changed_path in changed_paths:
 		full_path = (session_cwd / changed_path).resolve()
-		if not full_path.is_file():
-			continue
 
 		try:
 			relative_path = full_path.relative_to(package_root)
@@ -105,6 +104,10 @@ def main() -> int:
 		normalized_relative_path = relative_path.as_posix()
 		if not normalized_relative_path.lower().endswith(".luau"):
 			continue
+		if relative_path.parts[0].casefold() in {"src", "tests"}:
+			should_analyze = True
+		if not full_path.is_file():
+			continue
 
 		path_key = os.path.normcase(normalized_relative_path)
 		if path_key in seen_paths:
@@ -113,45 +116,61 @@ def main() -> int:
 		seen_paths.add(path_key)
 		format_paths.append(normalized_relative_path)
 
-	if not format_paths:
+	if not format_paths and not should_analyze:
 		return 0
 
 	mise_executable = "mise.exe" if os.name == "nt" else "mise"
-	try:
-		stylua_lookup = subprocess.run(
-			[mise_executable, "which", "stylua"],
-			cwd=package_root,
-			check=False,
-			capture_output=True,
-			text=True,
-		)
-	except OSError as error:
-		return fail(f"Failed to run mise which stylua: {error}")
+	if format_paths:
+		try:
+			stylua_lookup = subprocess.run(
+				[mise_executable, "which", "stylua"],
+				cwd=package_root,
+				check=False,
+				capture_output=True,
+				text=True,
+			)
+		except OSError as error:
+			return fail(f"Failed to run mise which stylua: {error}")
 
-	if stylua_lookup.returncode != 0:
-		return fail(f"mise which stylua failed: {stylua_lookup.stderr.strip()}")
+		if stylua_lookup.returncode != 0:
+			return fail(f"mise which stylua failed: {stylua_lookup.stderr.strip()}")
 
-	stylua_executable = stylua_lookup.stdout.strip()
-	if not stylua_executable:
-		return fail("mise which stylua returned an empty executable path")
+		stylua_executable = stylua_lookup.stdout.strip()
+		if not stylua_executable:
+			return fail("mise which stylua returned an empty executable path")
 
-	formatter_arguments = [
-		stylua_executable,
-		"--respect-ignores",
-		"--config-path",
-		str(config_path),
-		*format_paths,
-	]
-	try:
-		formatter_result = subprocess.run(
-			formatter_arguments,
-			cwd=package_root,
-			check=False,
-		)
-	except OSError as error:
-		return fail(f"Failed to run StyLua: {error}")
+		formatter_arguments = [
+			stylua_executable,
+			"--respect-ignores",
+			"--config-path",
+			str(config_path),
+			*format_paths,
+		]
+		try:
+			formatter_result = subprocess.run(
+				formatter_arguments,
+				cwd=package_root,
+				check=False,
+			)
+		except OSError as error:
+			return fail(f"Failed to run StyLua: {error}")
 
-	return formatter_result.returncode
+		if formatter_result.returncode != 0:
+			return formatter_result.returncode
+
+	if should_analyze:
+		try:
+			analysis_result = subprocess.run(
+				[mise_executable, "run", "--cd", str(repo_root), "analyze"],
+				cwd=package_root,
+				check=False,
+			)
+		except OSError as error:
+			return fail(f"Failed to run mise run analyze: {error}")
+
+		return analysis_result.returncode
+
+	return 0
 
 
 if __name__ == "__main__":
