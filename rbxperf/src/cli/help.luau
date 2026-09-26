@@ -1,5 +1,5 @@
 const parser = require '@cli/args'
-const dotenv = require '@cli/env'
+const env = require '@rbxperf/env'
 
 const function print_usage()
 	print [[
@@ -30,9 +30,9 @@ Environment:
   Values are read from .env in the current directory and the OS environment.
   .env values override OS environment variables.
 ]]
-	print(string.format('  %-29s %s', dotenv.keys.api_key, 'API key'))
-	print(string.format('  %-29s %s', dotenv.keys.universe_id, 'Universe ID'))
-	print(string.format('  %-29s %s', dotenv.keys.place_id, 'Place ID'))
+	print(string.format('  %-29s %s', env.keys.api_key, 'API key'))
+	print(string.format('  %-29s %s', env.keys.universe_id, 'Universe ID'))
+	print(string.format('  %-29s %s', env.keys.place_id, 'Place ID'))
 end
 
 return table.freeze { print_usage = print_usage }

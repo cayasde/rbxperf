@@ -1,11 +1,12 @@
 const fs = require '@std/fs'
 const process = require '@std/process'
 
-export type Values = { [string]: string }
+type Values = { [string]: string }
 
 export type Environment = {
-	str: (key: string) -> string,
-	number: (key: string) -> number?,
+	read get_api_key: () -> string?,
+	read get_universe_id: () -> string?,
+	read get_place_id: () -> string?,
 }
 
 const KEYS = table.freeze {
@@ -39,22 +40,34 @@ const function parse(contents: string): Values
 	return values
 end
 
-const function load(path: string)
+const function load(path: string): Environment
 	const ok, contents = pcall(function()
 		return fs.readFileToString(path)
 	end)
 
 	const dotenv_values: Values = if ok then parse(contents :: string) else {}
 
-	const function str(key: string): string
-		return dotenv_values[key] or process.env[key] or ''
+	const function get_value(key: string): string?
+		return dotenv_values[key] or process.env[key]
 	end
 
-	const function number(key: string): number?
-		return tonumber(str(key))
+	const function get_api_key(): string?
+		return get_value(KEYS.api_key)
 	end
 
-	return table.freeze { str = str, number = number }
+	const function get_universe_id(): string?
+		return get_value(KEYS.universe_id)
+	end
+
+	const function get_place_id(): string?
+		return get_value(KEYS.place_id)
+	end
+
+	return table.freeze {
+		get_api_key = get_api_key,
+		get_universe_id = get_universe_id,
+		get_place_id = get_place_id,
+	}
 end
 
-return table.freeze { keys = KEYS, load = load, parse = parse }
+return table.freeze { keys = KEYS, load = load }

@@ -7,11 +7,9 @@ export type CliOptions = {
 	warmup: number,
 }
 
-const dotenv = require '@cli/env'
+const env = require '@rbxperf/env'
 
-export type Environment = {
-	read str: (key: string) -> string,
-}
+export type Environment = env.Environment
 
 export type ParseResult =
 	{ kind: 'help' }
@@ -135,12 +133,12 @@ const function parse_option(options: CliOptions, args: { string }, index: number
 	return nil, `Unknown option '{option}'. Use 'rbxperf --help'.`
 end
 
-const function parse(args: { string }, env: Environment): ParseResult
+const function parse(args: { string }, environment: Environment): ParseResult
 	const options: CliOptions = {
 		paths = {},
-		api_key = env.str(dotenv.keys.api_key),
-		universe_id = env.str(dotenv.keys.universe_id),
-		place_id = env.str(dotenv.keys.place_id),
+		api_key = environment.get_api_key() or '',
+		universe_id = environment.get_universe_id() or '',
+		place_id = environment.get_place_id() or '',
 		samples = DEFAULT_SAMPLES,
 		warmup = DEFAULT_WARMUP,
 	}
@@ -179,19 +177,19 @@ const function parse(args: { string }, env: Environment): ParseResult
 	if options.api_key == '' then
 		return {
 			kind = 'error',
-			message = `Missing API key. Set {dotenv.keys.api_key} or pass {API_KEY_OPTION}.`,
+			message = `Missing API key. Set {env.keys.api_key} or pass {API_KEY_OPTION}.`,
 		}
 	end
 	if options.universe_id == '' then
 		return {
 			kind = 'error',
-			message = `Missing universe ID. Set {dotenv.keys.universe_id} or pass {UNIVERSE_ID_OPTION}.`,
+			message = `Missing universe ID. Set {env.keys.universe_id} or pass {UNIVERSE_ID_OPTION}.`,
 		}
 	end
 	if options.place_id == '' then
 		return {
 			kind = 'error',
-			message = `Missing place ID. Set {dotenv.keys.place_id} or pass {PLACE_ID_OPTION}.`,
+			message = `Missing place ID. Set {env.keys.place_id} or pass {PLACE_ID_OPTION}.`,
 		}
 	end
 

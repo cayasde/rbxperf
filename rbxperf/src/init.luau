@@ -1,9 +1,10 @@
 const process = require '@std/process'
 const runner = require '@rbxperf/runner'
+const env = require '@rbxperf/env'
 const cli = require '@cli'
 const logger = require '@rbxperf/logger'
 
-const environment = cli.env.load '.env'
+const environment = env.load '.env'
 const result = cli.args.parse({ ... }, environment)
 
 if result.kind == 'help' then

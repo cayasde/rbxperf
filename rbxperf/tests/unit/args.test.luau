@@ -1,10 +1,17 @@
 const args = require '@cli/args'
+const env = require '@rbxperf/env'
 const test = require '@std/test'
 
 const function environment(values: { [string]: string }): args.Environment
 	return {
-		str = function(key: string)
-			return values[key] or ''
+		get_api_key = function()
+			return values[env.keys.api_key]
+		end,
+		get_universe_id = function()
+			return values[env.keys.universe_id]
+		end,
+		get_place_id = function()
+			return values[env.keys.place_id]
 		end,
 	}
 end
