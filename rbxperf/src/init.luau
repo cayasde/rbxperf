@@ -1,16 +1,13 @@
 const process = require '@std/process'
 const runner = require '@rbxperf/runner'
-const parser = require '@cli/args'
-const dotenv = require '@cli/env'
-const help = require '@cli/help'
-const report = require '@cli/report'
+const cli = require '@cli'
 const logger = require '@rbxperf/logger'
 
-const environment = dotenv.load '.env'
-const result = parser.parse({ ... }, environment)
+const environment = cli.env.load '.env'
+const result = cli.args.parse({ ... }, environment)
 
 if result.kind == 'help' then
-	help.print_usage()
+	cli.help.print_usage()
 	process.exit(0)
 	return
 end
@@ -36,7 +33,7 @@ if result.kind == 'options' then
 	if not run_result.success then process.exit(1) end
 	if #run_result.results == 0 then process.exit(0) end
 
-	for _, line in report.format(run_result.results, run_result.duration_seconds) do
+	for _, line in cli.report.format(run_result.results, run_result.duration_seconds) do
 		print(line)
 	end
 
