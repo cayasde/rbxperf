@@ -168,7 +168,34 @@ def main() -> int:
 		except OSError as error:
 			return fail(f"Failed to run mise run analyze: {error}")
 
-		return analysis_result.returncode
+		try:
+			lute_lookup = subprocess.run(
+				[mise_executable, "which", "lute"],
+				cwd=package_root,
+				check=False,
+				capture_output=True,
+				text=True,
+			)
+		except OSError as error:
+			return fail(f"Failed to run mise which lute: {error}")
+
+		if lute_lookup.returncode != 0:
+			return fail(f"mise which lute failed: {lute_lookup.stderr.strip()}")
+
+		lute_executable = lute_lookup.stdout.strip()
+		if not lute_executable:
+			return fail("mise which lute returned an empty executable path")
+
+		try:
+			test_result = subprocess.run(
+				[lute_executable, "test"],
+				cwd=package_root,
+				check=False,
+			)
+		except OSError as error:
+			return fail(f"Failed to run lute test: {error}")
+
+		return analysis_result.returncode or test_result.returncode
 
 	return 0
 

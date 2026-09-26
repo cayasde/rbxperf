@@ -1,5 +1,5 @@
 {
-  "description": "Format and analyze changed Luau files.",
+  "description": "Format, analyze, and test changed Luau files.",
   "hooks": {
     "PostToolUse": [
       {
@@ -9,8 +9,8 @@
             "type": "command",
             "command": "repo_root=\"$(git rev-parse --show-toplevel)\" && mise exec --cd \"$repo_root\" -- python \"$repo_root/.codex/hooks/luau_post_tool_use.py\"",
             "commandWindows": "for /f \"tokens=*\" %i in ('git rev-parse --show-toplevel') do @mise.exe exec --cd \"%i\" -- python.exe \"%i\\.codex\\hooks\\luau_post_tool_use.py\"",
-            "timeout": 180,
-            "statusMessage": "Formatting and analyzing changed Luau files"
+            "timeout": 600,
+            "statusMessage": "Formatting, analyzing, and testing changed Luau files"
           }
         ]
       }
