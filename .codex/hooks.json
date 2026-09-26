@@ -1,0 +1,19 @@
+{
+  "description": "Format changed Luau files with StyLua.",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "apply_patch|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "repo_root=\"$(git rev-parse --show-toplevel)\" && mise exec --cd \"$repo_root/.codex\" -- python \"$repo_root/.codex/hooks/stylua.py\"",
+            "commandWindows": "for /f \"tokens=*\" %i in ('git rev-parse --show-toplevel') do @mise.exe exec --cd \"%i\\.codex\" -- python.exe \"%i\\.codex\\hooks\\stylua.py\"",
+            "timeout": 60,
+            "statusMessage": "Formatting changed Luau files with StyLua"
+          }
+        ]
+      }
+    ]
+  }
+}
